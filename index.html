@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vexto V1 Store</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #080c18;
+            color: #f1f5f9;
+            font-family: 'Inter', sans-serif;
+            min-height: 100vh;
+            padding: 2rem;
+        }
+
+        nav {
+            background: rgba(8, 12, 24, 0.9);
+            padding: 1rem;
+            position: fixed;
+            top: 0;
+            width: 100%;
+            z-index: 1000;
+        }
+
+        nav ul {
+            display: flex;
+            justify-content: center;
+            list-style: none;
+        }
+
+        nav ul li {
+            margin: 0 1rem;
+        }
+
+        nav ul li a {
+            color: #e2e8f0;
+            text-decoration: none;
+            font-weight: 600;
+            padding: 0.5rem 1rem;
+            transition: color 0.3s ease;
+        }
+
+        nav ul li a:hover {
+            color: #60a5fa;
+        }
+
+        .language-selector {
+            position: absolute;
+            right: 2rem;
+            top: 1.5rem;
+        }
+
+        .language-selector select {
+            background: rgba(30, 41, 59, 0.9);
+            color: #f1f5f9;
+            border: 1px solid #60a5fa;
+            border-radius: 5px;
+            padding: 0.5rem;
+            cursor: pointer;
+        }
+
+        .title {
+            text-align: center;
+            margin: 5rem 0 2rem;
+            font-size: 3rem;
+            font-weight: 800;
+            color: #60a5fa;
+        }
+
+        .home-content {
+            text-align: center;
+            display: none;
+        }
+
+        .home-content.active {
+            display: block;
+        }
+
+        .support-box {
+            background: rgba(15, 23, 42, 0.9);
+            border-radius: 15px;
+            padding: 2rem;
+            margin: 2rem 0;
+            border: 2px solid #60a5fa;
+        }
+
+        .support-box p {
+            font-size: 1.5rem;
+            color: #60a5fa;
+        }
+
+        .discord-section {
+            margin-top: 2rem;
+        }
+
+        .discord-section img {
+            width: 200px;
+            height: 200px;
+            border-radius: 50%;
+            border: 2px solid #60a5fa;
+        }
+
+        .discord-button {
+            padding: 1rem 2rem;
+            background: #60a5fa;
+            border: none;
+            border-radius: 10px;
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 1rem;
+            transition: background 0.3s ease;
+        }
+
+        .discord-button:hover {
+            background: #3b82f6;
+        }
+
+        .products {
+            display: none;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin: 2rem 0;
+        }
+
+        .products.active {
+            display: grid;
+        }
+
+        .product {
+            background: rgba(15, 23, 42, 0.9);
+            border-radius: 15px;
+            padding: 2rem;
+            border: 2px solid #60a5fa;
+            transition: transform 0.3s ease;
+        }
+
+        .product:hover {
+            transform: translateY(-10px);
+        }
+
+        .product img {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+            border-radius: 10px;
+            margin-bottom: 1rem;
+        }
+
+        .product-title {
+            font-size: 1.8rem;
+            font-weight: 600;
+            color: #60a5fa;
+            margin-bottom: 1rem;
+        }
+
+        .product-description {
+            color: #94a3b8;
+            margin-bottom: 1rem;
+            font-size: 1rem;
+        }
+
+        .purchase-button {
+            width: 100%;
+            padding: 1rem;
+            background: #60a5fa;
+            border: none;
+            border-radius: 10px;
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+
+        .purchase-button:hover {
+            background: #3b82f6;
+        }
+
+        .purchase-modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.9);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .purchase-modal-content {
+            background: rgba(15, 23, 42, 0.9);
+            color: #f1f5f9;
+            padding: 2rem;
+            border-radius: 15px;
+            width: 90%;
+            max-width: 500px;
+            border: 2px solid #60a5fa;
+        }
+
+        .close {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            background: #ef4444;
+            border: none;
+            border-radius: 50%;
+            color: white;
+            font-size: 1.5rem;
+            width: 40px;
+            height: 40px;
+            cursor: pointer;
+        }
+
+        .close:hover {
+            background: #dc2626;
+        }
+
+        .purchase-modal-content h2 {
+            font-size: 2rem;
+            color: #60a5fa;
+            margin-bottom: 1.5rem;
+        }
+
+        .purchase-form {
+            display: grid;
+            gap: 1rem;
+        }
+
+        .purchase-form input, .purchase-form select {
+            padding: 1rem;
+            border: none;
+            border-radius: 10px;
+            background: rgba(30, 41, 59, 0.9);
+            color: #f1f5f9;
+            font-size: 1rem;
+        }
+
+        .purchase-form button {
+            padding: 1rem;
+            background: #60a5fa;
+            border: none;
+            border-radius: 10px;
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .purchase-form button:hover {
+            background: #3b82f6;
+        }
+
+        footer {
+            text-align: center;
+            padding: 2rem;
+            color: #94a3b8;
+        }
+
+        @media (max-width: 768px) {
+            .title { font-size: 2rem; margin-top: 4rem; }
+            nav ul { flex-wrap: wrap; }
+            nav ul li { margin: 0.5rem; }
+            .language-selector { position: static; margin: 1rem auto; display: block; }
+            .support-box p { font-size: 1.2rem; }
+            .discord-section img { width: 150px; height: 150px; }
+        }
+    </style>
+</head>
+<body>
+    <nav>
+        <ul>
+            <li><a href="#home" onclick="navigate('home')" data-lang="nav-home">Home</a></li>
+            <li><a href="#products" onclick="navigate('products')" data-lang="nav-products">Products</a></li>
+            <li><a href="#about" onclick="navigate('about')" data-lang="nav-about">About</a></li>
+            <li><a href="#contact" onclick="navigate('contact')" data-lang="nav-contact">Contact</a></li>
+            <li><a href="#faq" onclick="navigate('faq')" data-lang="nav-faq">FAQ</a></li>
+            <div class="language-selector">
+                <select id="language" onchange="changeLanguage()">
+                    <option value="en">English</option>
+                    <option value="es">Español</option>
+                    <option value="fr">Français</option>
+                    <option value="de">Deutsch</option>
+                    <option value="ja">日本語</option>
+                </select>
+            </div>
+        </ul>
+    </nav>
+
+    <div class="title" data-lang="title">Vexto V1 Store</div>
+
+    <div class="home-content" id="home-content">
+        <div class="support-box">
+            <p data-lang="support">Premium Support 24/7 In our Discord Server</p>
+        </div>
+        <div class="discord-section">
+            <img src="https://cdn.discordapp.com/attachments/1349520046526828564/1352165831286460439/standard_2.gif?ex=67e051d0&is=67df0050&hm=65d3db54e7ddc5d426cb755f53899e2d7218a8d27e4ff78853a1a8202d4f18ca&" alt="Discord">
+            <button class="discord-button" onclick="window.open('https://discord.gg/8qcTmeP9', '_blank')" data-lang="discord">Join Discord</button>
+        </div>
+    </div>
+
+    <div class="products" id="product-list">
+        <div class="product" onclick="navigate('product1')">
+            <img src="https://cdn.discordapp.com/attachments/1349520046526828564/1352165831286460439/standard_2.gif?ex=67e051d0&is=67df0050&hm=65d3db54e7ddc5d426cb755f53899e2d7218a8d27e4ff78853a1a8202d4f18ca&" alt="South Bronx Premium Script Vexto V1">
+            <div class="product-title" data-lang="product1-title">South Bronx Premium Script Vexto V1</div>
+            <div class="product-description">A premium script for advanced users.</div>
+            <button class="purchase-button" onclick="event.stopPropagation(); openPurchaseModal('South Bronx Premium Script Vexto V1', 299.99)" data-lang="purchase">Purchase</button>
+        </div>
+        <div class="product" onclick="navigate('product2')">
+            <img src="https://cdn.discordapp.com/attachments/1349520046526828564/1352165831286460439/standard_2.gif?ex=67e051d0&is=67df0050&hm=65d3db54e7ddc5d426cb755f53899e2d7218a8d27e4ff78853a1a8202d4f18ca&" alt="Neon Pulse">
+            <div class="product-title" data-lang="product2-title">Neon Pulse</div>
+            <div class="product-description">A dynamic script for visual effects.</div>
+            <button class="purchase-button" onclick="event.stopPropagation(); openPurchaseModal('Neon Pulse', 199.99)" data-lang="purchase">Purchase</button>
+        </div>
+        <div class="product" onclick="navigate('product3')">
+            <img src="https://cdn.discordapp.com/attachments/1349520046526828564/1352165831286460439/standard_2.gif?ex=67e051d0&is=67df0050&hm=65d3db54e7ddc5d426cb755f53899e2d7218a8d27e4ff78853a1a8202d4f18ca&" alt="Flux Engine">
+            <div class="product-title" data-lang="product3-title">Flux Engine</div>
+            <div class="product-description">A powerful engine for complex tasks.</div>
+            <button class="purchase-button" onclick="event.stopPropagation(); openPurchaseModal('Flux Engine', 399.99)" data-lang="purchase">Purchase</button>
+        </div>
+    </div>
+
+    <div id="purchaseModal" class="purchase-modal">
+        <div class="purchase-modal-content">
+            <button class="close" onclick="closePurchaseModal()">×</button>
+            <h2 id="purchase-title" data-lang="purchase-title">Purchase Item</h2>
+            <form class="purchase-form" onsubmit="event.preventDefault(); handlePurchase(this);">
+                <input type="text" id="full-name" placeholder="Full Name" data-lang-placeholder="full-name" required>
+                <input type="email" id="email" placeholder="Email Address" data-lang-placeholder="email" required>
+                <input type="email" id="confirm-email" placeholder="Confirm Email Address" data-lang-placeholder="confirm-email" required>
+                <input type="text" id="phone" placeholder="Phone Number (Optional)" data-lang-placeholder="phone">
+                <select id="payment-method" required>
+                    <option value="" data-lang="payment-method">Select Payment Method</option>
+                    <option value="credit" data-lang="credit-card">Credit Card</option>
+                    <option value="paypal" data-lang="paypal">PayPal</option>
+                    <option value="applepay" data-lang="apple-pay">Apple Pay</option>
+                    <option value="crypto" data-lang="crypto">Cryptocurrency</option>
+                </select>
+                <div data-lang="price">Price: <span id="purchase-price">$0.00</span></div>
+                <button type="submit" data-lang="complete-purchase">Complete Purchase</button>
+            </form>
+        </div>
+    </div>
+
+    <footer>
+        <p data-lang="footer">© 2025 Vexto V1 Store. All rights reserved.</p>
+    </footer>
+
+    <script>
+        const translations = {
+            en: {
+                "title": "Vexto V1 Store",
+                "nav-home": "Home",
+                "nav-products": "Products",
+                "nav-about": "About",
+                "nav-contact": "Contact",
+                "nav-faq": "FAQ",
+                "support": "Premium Support 24/7 In our Discord Server",
+                "discord": "Join Discord",
+                "product1-title": "South Bronx Premium Script Vexto V1",
+                "product2-title": "Neon Pulse",
+                "product3-title": "Flux Engine",
+                "purchase": "Purchase",
+                "purchase-title": "Purchase Item",
+                "full-name": "Full Name",
+                "email": "Email Address",
+                "confirm-email": "Confirm Email Address",
+                "phone": "Phone Number (Optional)",
+                "payment-method": "Select Payment Method",
+                "credit-card": "Credit Card",
+                "paypal": "PayPal",
+                "apple-pay": "Apple Pay",
+                "crypto": "Cryptocurrency",
+                "price": "Price",
+                "complete-purchase": "Complete Purchase",
+                "purchase-success": "Purchase completed! An email with your product information has been sent to your email address.",
+                "footer": "© 2025 Vexto V1 Store. All rights reserved.",
+                "email-mismatch": "Email addresses do not match!"
+            },
+            es: {
+                "title": "Tienda Vexto V1",
+                "nav-home": "Inicio",
+                "nav-products": "Productos",
+                "nav-about": "Acerca de",
+                "nav-contact": "Contacto",
+                "nav-faq": "Preguntas Frecuentes",
+                "support": "Soporte Premium 24/7 en nuestro servidor de Discord",
+                "discord": "Unirse a Discord",
+                "product1-title": "South Bronx Premium Script Vexto V1",
+                "product2-title": "Pulso Neón",
+                "product3-title": "Motor de Flujo",
+                "purchase": "Comprar",
+                "purchase-title": "Comprar Artículo",
+                "full-name": "Nombre Completo",
+                "email": "Dirección de Correo",
+                "confirm-email": "Confirmar Dirección de Correo",
+                "phone": "Número de Teléfono (Opcional)",
+                "payment-method": "Seleccionar Método de Pago",
+                "credit-card": "Tarjeta de Crédito",
+                "paypal": "PayPal",
+                "apple-pay": "Apple Pay",
+                "crypto": "Criptomoneda",
+                "price": "Precio",
+                "complete-purchase": "Completar Compra",
+                "purchase-success": "¡Compra completada! Se ha enviado un correo con la información de su producto a su dirección de correo.",
+                "footer": "© 2025 Tienda Vexto V1. Todos los derechos reservados.",
+                "email-mismatch": "¡Las direcciones de correo no coinciden!"
+            },
+            fr: {
+                "title": "Boutique Vexto V1",
+                "nav-home": "Accueil",
+                "nav-products": "Produits",
+                "nav-about": "À Propos",
+                "nav-contact": "Contact",
+                "nav-faq": "FAQ",
+                "support": "Support Premium 24/7 sur notre serveur Discord",
+                "discord": "Rejoindre Discord",
+                "product1-title": "South Bronx Premium Script Vexto V1",
+                "product2-title": "Impulsion Néon",
+                "product3-title": "Moteur de Flux",
+                "purchase": "Acheter",
+                "purchase-title": "Acheter un Article",
+                "full-name": "Nom Complet",
+                "email": "Adresse Email",
+                "confirm-email": "Confirmer l'Adresse Email",
+                "phone": "Numéro de Téléphone (Facultatif)",
+                "payment-method": "Sélectionner un Moyen de Paiement",
+                "credit-card": "Carte de Crédit",
+                "paypal": "PayPal",
+                "apple-pay": "Apple Pay",
+                "crypto": "Cryptomonnaie",
+                "price": "Prix",
+                "complete-purchase": "Finaliser l'Achat",
+                "purchase-success": "Achat terminé ! Un email avec les informations de votre produit a été envoyé à votre adresse email.",
+                "footer": "© 2025 Boutique Vexto V1. Tous droits réservés.",
+                "email-mismatch": "Les adresses email ne correspondent pas !"
+            },
+            de: {
+                "title": "Vexto V1 Laden",
+                "nav-home": "Startseite",
+                "nav-products": "Produkte",
+                "nav-about": "Über uns",
+                "nav-contact": "Kontakt",
+                "nav-faq": "FAQ",
+                "support": "Premium-Support 24/7 auf unserem Discord-Server",
+                "discord": "Discord beitreten",
+                "product1-title": "South Bronx Premium Script Vexto V1",
+                "product2-title": "Neon-Impuls",
+                "product3-title": "Fluss-Motor",
+                "purchase": "Kaufen",
+                "purchase-title": "Artikel kaufen",
+                "full-name": "Vollständiger Name",
+                "email": "E-Mail-Adresse",
+                "confirm-email": "E-Mail-Adresse bestätigen",
+                "phone": "Telefonnummer (Optional)",
+                "payment-method": "Zahlungsmethode auswählen",
+                "credit-card": "Kreditkarte",
+                "paypal": "PayPal",
+                "apple-pay": "Apple Pay",
+                "crypto": "Kryptowährung",
+                "price": "Preis",
+                "complete-purchase": "Kauf abschließen",
+                "purchase-success": "Kauf abgeschlossen! Eine E-Mail mit Ihren Produktinformationen wurde an Ihre E-Mail-Adresse gesendet.",
+                "footer": "© 2025 Vexto V1 Laden. Alle Rechte vorbehalten.",
+                "email-mismatch": "E-Mail-Adressen stimmen nicht überein!"
+            },
+            ja: {
+                "title": "Vexto V1 ストア",
+                "nav-home": "ホーム",
+                "nav-products": "製品",
+                "nav-about": "会社概要",
+                "nav-contact": "お問い合わせ",
+                "nav-faq": "よくある質問",
+                "support": "プレミアムサポート 24/7 ディスコードサーバーで",
+                "discord": "ディスコードに参加",
+                "product1-title": "South Bronx Premium Script Vexto V1",
+                "product2-title": "ネオンパルス",
+                "product3-title": "フラックスエンジン",
+                "purchase": "購入",
+                "purchase-title": "商品購入",
+                "full-name": "フルネーム",
+                "email": "メールアドレス",
+                "confirm-email": "メールアドレスを確認",
+                "phone": "電話番号（任意）",
+                "payment-method": "支払い方法を選択",
+                "credit-card": "クレジットカード",
+                "paypal": "PayPal",
+                "apple-pay": "Apple Pay",
+                "crypto": "暗号通貨",
+                "price": "価格",
+                "complete-purchase": "購入を完了",
+                "purchase-success": "購入が完了しました！製品情報があなたのメールアドレスに送信されました。",
+                "footer": "© 2025 Vexto V1 ストア。全著作権所有。",
+                "email-mismatch": "メールアドレスが一致しません！"
+            }
+        };
+
+        function getTranslation(key) {
+            const lang = document.getElementById('language').value;
+            return translations[lang][key] || translations['en'][key];
+        }
+
+        function updateTextContent() {
+            document.querySelectorAll('[data-lang]').forEach(element => {
+                const key = element.getAttribute('data-lang');
+                element.textContent = getTranslation(key);
+            });
+            document.querySelectorAll('[data-lang-placeholder]').forEach(element => {
+                const key = element.getAttribute('data-lang-placeholder');
+                element.placeholder = getTranslation(key);
+            });
+        }
+
+        function changeLanguage() {
+            updateTextContent();
+            const purchaseModal = document.getElementById('purchaseModal');
+            if (purchaseModal.style.display === 'flex') {
+                document.getElementById('purchase-title').textContent = getTranslation('purchase-title');
+                document.getElementById('purchase-price').textContent = `$${products.find(p => p.name === purchaseModal.dataset.product)?.price.toFixed(2) || '0.00'}`;
+            }
+        }
+
+        const products = [
+            { name: 'South Bronx Premium Script Vexto V1', price: 299.99 },
+            { name: 'Neon Pulse', price: 199.99 },
+            { name: 'Flux Engine', price: 399.99 }
+        ];
+
+        function openPurchaseModal(productName, price) {
+            const modal = document.getElementById("purchaseModal");
+            modal.style.display = "flex";
+            modal.dataset.product = productName;
+            document.getElementById("purchase-title").textContent = getTranslation('purchase-title');
+            document.getElementById("purchase-price").textContent = `$${price.toFixed(2)}`;
+            updateTextContent();
+        }
+
+        function closePurchaseModal() {
+            document.getElementById("purchaseModal").style.display = "none";
+        }
+
+        function handlePurchase(form) {
+            const email = form.querySelector('#email').value;
+            const confirmEmail = form.querySelector('#confirm-email').value;
+            const fullName = form.querySelector('#full-name').value;
+            const phone = form.querySelector('#phone').value;
+            const paymentMethod = form.querySelector('#payment-method').value;
+            const productName = document.getElementById("purchaseModal").dataset.product;
+            const price = products.find(p => p.name === productName).price;
+
+            if (email !== confirmEmail) {
+                alert(getTranslation('email-mismatch'));
+                return;
+            }
+
+            if (paymentMethod === 'applepay') {
+                if (!window.ApplePaySession || !ApplePaySession.canMakePayments()) {
+                    alert("Apple Pay is not available on this device. Please select another payment method.");
+                    return;
+                }
+                console.log("Processing Apple Pay payment...");
+            }
+
+            const purchaseInfo = {
+                fullName,
+                email,
+                phone,
+                paymentMethod,
+                productName,
+                price,
+                productDetails: "This is a placeholder for the South Bronx Premium Script Vexto V1 digital product info. Replace this with the actual script or download link."
+            };
+
+            console.log("Purchase info:", purchaseInfo);
+            alert(`${getTranslation('purchase-success')}\n\nPurchase Details:\nName: ${fullName}\nEmail: ${email}\nProduct: ${productName}\nPrice: $${price.toFixed(2)}\nPayment Method: ${paymentMethod === 'applepay' ? 'Apple Pay' : paymentMethod.charAt(0).toUpperCase() + paymentMethod.slice(1)}\nProduct Info: ${purchaseInfo.productDetails}`);
+
+            closePurchaseModal();
+        }
+
+        function navigate(page) {
+            const homeContent = document.getElementById("home-content");
+            const productList = document.getElementById("product-list");
+
+            if (page === 'home') {
+                homeContent.classList.add('active');
+                productList.classList.remove('active');
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            } else if (page === 'products') {
+                homeContent.classList.remove('active');
+                productList.classList.add('active');
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            } else {
+                homeContent.classList.remove('active');
+                productList.classList.remove('active');
+                const newTab = window.open('', '_blank');
+                newTab.document.write(`
+                    <!DOCTYPE html>
+                    <html lang="${document.getElementById('language').value}">
+                    <head>
+                        <meta charset="UTF-8">
+                        <title>Vexto V1 - ${page.charAt(0).toUpperCase() + page.slice(1)}</title>
+                        <style>
+                            body { background: #080c18; color: #f1f5f9; font-family: 'Inter', sans-serif; height: 100vh; display: flex; justify-content: center; align-items: center; margin: 0; }
+                            h1 { font-size: 2rem; color: #60a5fa; }
+                        </style>
+                    </head>
+                    <body>
+                        <h1>${getTranslation('nav-' + page)} Page Coming Soon</h1>
+                    </body>
+                    </html>
+                `);
+                newTab.document.close();
+            }
+        }
+
+        updateTextContent();
+        document.getElementById("home-content").classList.add('active');
+    </script>
+</body>
+</html>
