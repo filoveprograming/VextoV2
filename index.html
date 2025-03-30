@@ -190,7 +190,8 @@ enterButton.MouseButton1Click:Connect(function()
             Visual = Window:AddTab({ Title = "Visual", Icon = "eye" }),
             Combat = Window:AddTab({ Title = "Combat", Icon = "skull" }),
             Main = Window:AddTab({ Title = "Player", Icon = "user" }),
-            Others = Window:AddTab({ Title = "Others", Icon = "box" }),
+            Others = Window:AddTab({ Title = "Others", Icon = "users" }),
+            Money = Window:AddTab({ Title = "Money", Icon = "wallet" }), -- Added Money tab with wallet icon under Others
             Dupe = Window:AddTab({ Title = "Dupe", Icon = "copy" }),
             Bypass = Window:AddTab({ Title = "Bypass", Icon = "shield-off" }),
             Settings = Window:AddTab({ Title = "Settings", Icon = "settings" })
@@ -346,29 +347,35 @@ enterButton.MouseButton1Click:Connect(function()
                 local state = Options.Noclip.Value
                 local character = game.Players.LocalPlayer.Character
                 if state then
-                    if noclipConnection then noclipConnection:Disconnect() end -- Disconnect any existing connection
+                    if noclipConnection then noclipConnection:Disconnect() end
                     noclipConnection = game:GetService("RunService").Stepped:Connect(function()
-                        if character then
+                        if character and character.Parent then
                             for _, part in pairs(character:GetDescendants()) do
-                                if part:IsA("BasePart") and part.CanCollide then
+                                if part:IsA("BasePart") then
                                     part.CanCollide = false
                                 end
                             end
                         end
                     end)
-                    game.Players.LocalPlayer.CharacterAdded:Connect(function(char)
-                        wait(0.1) -- Small delay to ensure character loads
-                        if Options.Noclip.Value then
+                    local function setupNoclip(char)
+                        task.wait(0.1)
+                        if Options.Noclip.Value and char and char.Parent then
                             for _, part in pairs(char:GetDescendants()) do
-                                if part:IsA("BasePart") then part.CanCollide = false end
+                                if part:IsA("BasePart") then
+                                    part.CanCollide = false
+                                end
                             end
                         end
-                    end)
+                    end
+                    game.Players.LocalPlayer.CharacterAdded:Connect(setupNoclip)
+                    if character then setupNoclip(character) end
                 else
                     if noclipConnection then noclipConnection:Disconnect() noclipConnection = nil end
-                    if character then
+                    if character and character.Parent then
                         for _, part in pairs(character:GetDescendants()) do
-                            if part:IsA("BasePart") then part.CanCollide = true end
+                            if part:IsA("BasePart") then
+                                part.CanCollide = true
+                            end
                         end
                     end
                 end
@@ -390,7 +397,6 @@ enterButton.MouseButton1Click:Connect(function()
                 end
             end)
 
-            -- Others Tab Updates
             local playerDropdown
             local function refreshPlayerList()
                 local playerList = {}
@@ -417,23 +423,54 @@ enterButton.MouseButton1Click:Connect(function()
                 AllowNull = true 
             })
 
-            Tabs.Others:AddButton({ 
+            local Spectate = Tabs.Others:AddToggle("Spectate", { 
                 Title = "Spectate Player", 
-                Callback = function()
-                    local selectedPlayerName = Options.PlayerList.Value
+                Default = false 
+            })
+            local spectateTarget = nil
+            Spectate:OnChanged(function()
+                local state = Options.Spectate.Value
+                local selectedPlayerName = Options.PlayerList.Value
+                
+                if state then
                     if selectedPlayerName then
                         local targetPlayer = game.Players:FindFirstChild(selectedPlayerName)
-                        if targetPlayer and targetPlayer.Character then
+                        if targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("Humanoid") then
+                            spectateTarget = targetPlayer
                             game.Workspace.CurrentCamera.CameraSubject = targetPlayer.Character.Humanoid
-                            Fluent:Notify({ Title = "Others", Content = "Spectating " .. selectedPlayerName .. "!", Duration = 5 })
+                            Fluent:Notify({ 
+                                Title = "Others", 
+                                Content = "Started spectating " .. selectedPlayerName .. "!", 
+                                Duration = 5 
+                            })
                         else
-                            Fluent:Notify({ Title = "Others", Content = "Player not found!", Duration = 5 })
+                            Spectate:SetValue(false)
+                            Fluent:Notify({ 
+                                Title = "Others", 
+                                Content = "Player not found or no character!", 
+                                Duration = 5 
+                            })
                         end
                     else
-                        Fluent:Notify({ Title = "Others", Content = "Please select a player!", Duration = 5 })
+                        Spectate:SetValue(false)
+                        Fluent:Notify({ 
+                            Title = "Others", 
+                            Content = "Please select a player first!", 
+                            Duration = 5 
+                        })
                     end
-                end 
-            })
+                else
+                    if spectateTarget then
+                        game.Workspace.CurrentCamera.CameraSubject = game.Players.LocalPlayer.Character and game.Players.LocalPlayer.Character:FindFirstChild("Humanoid") or nil
+                        Fluent:Notify({ 
+                            Title = "Others", 
+                            Content = "Stopped spectating " .. spectateTarget.Name .. "!", 
+                            Duration = 5 
+                        })
+                        spectateTarget = nil
+                    end
+                end
+            end)
 
             Tabs.Others:AddButton({ 
                 Title = "Teleport to Player", 
@@ -450,7 +487,7 @@ enterButton.MouseButton1Click:Connect(function()
                             loadingFrame.BackgroundTransparency = 0.5
                             loadingFrame.Parent = loadingGui
                             local vLogo = Instance.new("TextLabel")
-                            vLogo.Size = UDim2.new(0, 100, 0, 100)
+                            vLogo.Size = UDim2.new(0, 100, 0, 0, 100)
                             vLogo.Position = UDim2.new(0.5, -50, 0.5, -50)
                             vLogo.BackgroundTransparency = 1
                             vLogo.Text = "V"
@@ -476,6 +513,12 @@ enterButton.MouseButton1Click:Connect(function()
             Tabs.Others:AddParagraph({ 
                 Title = "Troll Player", 
                 Content = "Coming soon!" 
+            })
+
+            -- Money Tab Content
+            Tabs.Money:AddParagraph({ 
+                Title = "Money Features", 
+                Content = "Money-related features will be added here.\nThis section is under development." 
             })
 
             Tabs.Dupe:AddParagraph({ Title = "Dupe", Content = "Duplication features will be added here." })
@@ -515,7 +558,7 @@ enterButton.MouseButton1Click:Connect(function()
         Window:SelectTab(1)
         Fluent:Notify({ Title = "Fluent", Content = "The script has been loaded for Tha Bronx 3.", Duration = 8 })
         SaveManager:LoadAutoloadConfig()
-        refreshPlayerList() -- Initial player list refresh
+        refreshPlayerList()
     else
         Fluent:Notify({ Title = "Key System", Content = "Invalid key! Please try again.", Duration = 5 })
     end
