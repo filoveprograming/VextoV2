@@ -38,7 +38,6 @@ local InterfaceManager = {} do
     function InterfaceManager:BuildInterfaceSection(tab) assert(self.Library, "Must set InterfaceManager.Library") local Library = self.Library local Settings = InterfaceManager.Settings InterfaceManager:LoadSettings() local section = tab:AddSection("Interface") local InterfaceTheme = section:AddDropdown("InterfaceTheme", { Title = "Theme", Description = "Changes the interface theme.", Values = Library.Themes, Default = Settings.Theme, Callback = function(Value) Library:SetTheme(Value) Settings.Theme = Value InterfaceManager:SaveSettings() end }) InterfaceTheme:SetValue(Settings.Theme) if Library.UseAcrylic then section:AddToggle("AcrylicToggle", { Title = "Acrylic", Description = "The blurred background requires graphic quality 8+", Default = Settings.Acrylic, Callback = function(Value) Library:ToggleAcrylic(Value) Settings.Acrylic = Value InterfaceManager:SaveSettings() end }) end section:AddToggle("TransparentToggle", { Title = "Transparency", Description = "Makes the interface transparent.", Default = Settings.Transparency, Callback = function(Value) Library:ToggleTransparency(Value) Settings.Transparency = Value InterfaceManager:SaveSettings() end }) local MenuKeybind = section:AddKeybind("MenuKeybind", { Title = "Minimize Bind", Default = Settings.MenuKeybind }) MenuKeybind:OnChanged(function() Settings.MenuKeybind = MenuKeybind.Value InterfaceManager:SaveSettings() end) Library.MinimizeKeybind = MenuKeybind end
 end
 
--- Reverted Transparent Key System with Fixed Get Key
 local player = game.Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 
@@ -50,7 +49,7 @@ keySystemGui.Enabled = true
 local keyFrame = Instance.new("Frame")
 keyFrame.Size = UDim2.new(0, 450, 0, 300)
 keyFrame.Position = UDim2.new(0.5, -225, 0.5, -150)
-keyFrame.BackgroundTransparency = 0.7 -- Semi-transparent background
+keyFrame.BackgroundTransparency = 0.7
 keyFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
 keyFrame.BorderSizePixel = 0
 keyFrame.Active = true
@@ -156,7 +155,6 @@ notification.TextSize = 14
 notification.Parent = keyFrame
 notification.Visible = false
 
--- Hover Effects
 enterButton.MouseEnter:Connect(function()
     enterButton.BackgroundTransparency = 0.2
 end)
@@ -171,16 +169,14 @@ getKeyButton.MouseLeave:Connect(function()
     getKeyButton.BackgroundTransparency = 0.3
 end)
 
--- Key System Logic
-local validKey = "VEXTONEWUPDATELOLEZHUB" -- Replace with your actual key
+local validKey = "VEXTONEWUPDATEV3"
 
 enterButton.MouseButton1Click:Connect(function()
     local enteredKey = keyInput.Text
     if enteredKey == validKey then
         keySystemGui:Destroy()
-        -- Proceed to create the main window
         local Window = Fluent:CreateWindow({
-            Title = "Vexto V2 Premium Tha bronx 3" .. Fluent.Version,
+            Title = "Vexto V2 Premium Tha Bronx 3" .. Fluent.Version,
             SubTitle = "Created By Fivestar",
             TabWidth = 160,
             Size = UDim2.fromOffset(580, 460),
@@ -211,7 +207,6 @@ enterButton.MouseButton1Click:Connect(function()
                 Fluent:Notify({ Title = "Credits", Content = "Discord link copied to clipboard!", Duration = 5 })
             end})
 
-            -- Visual Tab
             local ESP = Tabs.Visual:AddToggle("ESP", { Title = "ESP", Default = false })
             local Tracers = Tabs.Visual:AddToggle("Tracers", { Title = "Tracers", Default = false })
             local espObjects = {}
@@ -319,27 +314,23 @@ enterButton.MouseButton1Click:Connect(function()
                 end
             end})
 
-            -- Combat Tab (Placeholder for now)
             Tabs.Combat:AddParagraph({ Title = "Combat", Content = "Combat features will be added here." })
 
-            -- Player Tab
             Tabs.Main:AddButton({ Title = "Speed Boost", Description = "Boosts speed to 35 with walking animation", Callback = function()
                 local character = game.Players.LocalPlayer.Character
                 if character and character:FindFirstChild("Humanoid") then
                     local humanoid = character.Humanoid
                     local originalSpeed = humanoid.WalkSpeed
                     humanoid.WalkSpeed = 35
-                    -- Force walking animation to trick anticheat
                     humanoid:ChangeState(Enum.HumanoidStateType.Running)
                     local animator = humanoid:FindFirstChildOfClass("Animator")
                     if animator then
                         local animation = Instance.new("Animation")
-                        animation.AnimationId = "rbxassetid://013141277" -- Default Roblox walk animation
+                        animation.AnimationId = "rbxassetid://013141277"
                         local track = animator:LoadAnimation(animation)
                         track:Play()
                     end
                     Fluent:Notify({ Title = "Player", Content = "Speed Boost activated!", Duration = 5 })
-                    -- Reset after 10 seconds (adjustable)
                     task.delay(10, function()
                         humanoid.WalkSpeed = originalSpeed
                         Fluent:Notify({ Title = "Player", Content = "Speed Boost deactivated!", Duration = 5 })
@@ -355,15 +346,22 @@ enterButton.MouseButton1Click:Connect(function()
                 local state = Options.Noclip.Value
                 local character = game.Players.LocalPlayer.Character
                 if state then
-                    if character then
-                        for _, part in pairs(character:GetDescendants()) do
-                            if part:IsA("BasePart") then part.CanCollide = false end
+                    if noclipConnection then noclipConnection:Disconnect() end -- Disconnect any existing connection
+                    noclipConnection = game:GetService("RunService").Stepped:Connect(function()
+                        if character then
+                            for _, part in pairs(character:GetDescendants()) do
+                                if part:IsA("BasePart") and part.CanCollide then
+                                    part.CanCollide = false
+                                end
+                            end
                         end
-                    end
-                    noclipConnection = game.Players.LocalPlayer.CharacterAdded:Connect(function(char)
-                        wait()
-                        for _, part in pairs(char:GetDescendants()) do
-                            if part:IsA("BasePart") then part.CanCollide = false end
+                    end)
+                    game.Players.LocalPlayer.CharacterAdded:Connect(function(char)
+                        wait(0.1) -- Small delay to ensure character loads
+                        if Options.Noclip.Value then
+                            for _, part in pairs(char:GetDescendants()) do
+                                if part:IsA("BasePart") then part.CanCollide = false end
+                            end
                         end
                     end)
                 else
@@ -392,7 +390,94 @@ enterButton.MouseButton1Click:Connect(function()
                 end
             end)
 
-            Tabs.Others:AddParagraph({ Title = "Others", Content = "Additional features will be added here." })
+            -- Others Tab Updates
+            local playerDropdown
+            local function refreshPlayerList()
+                local playerList = {}
+                for _, p in pairs(game.Players:GetPlayers()) do
+                    if p ~= game.Players.LocalPlayer then
+                        table.insert(playerList, p.Name)
+                    end
+                end
+                playerDropdown:SetValues(playerList)
+                playerDropdown:SetValue(nil)
+            end
+
+            Tabs.Others:AddButton({ 
+                Title = "Refresh Player List", 
+                Callback = function()
+                    refreshPlayerList()
+                    Fluent:Notify({ Title = "Others", Content = "Player list refreshed!", Duration = 3 })
+                end 
+            })
+
+            playerDropdown = Tabs.Others:AddDropdown("PlayerList", { 
+                Title = "Players", 
+                Values = {}, 
+                AllowNull = true 
+            })
+
+            Tabs.Others:AddButton({ 
+                Title = "Spectate Player", 
+                Callback = function()
+                    local selectedPlayerName = Options.PlayerList.Value
+                    if selectedPlayerName then
+                        local targetPlayer = game.Players:FindFirstChild(selectedPlayerName)
+                        if targetPlayer and targetPlayer.Character then
+                            game.Workspace.CurrentCamera.CameraSubject = targetPlayer.Character.Humanoid
+                            Fluent:Notify({ Title = "Others", Content = "Spectating " .. selectedPlayerName .. "!", Duration = 5 })
+                        else
+                            Fluent:Notify({ Title = "Others", Content = "Player not found!", Duration = 5 })
+                        end
+                    else
+                        Fluent:Notify({ Title = "Others", Content = "Please select a player!", Duration = 5 })
+                    end
+                end 
+            })
+
+            Tabs.Others:AddButton({ 
+                Title = "Teleport to Player", 
+                Callback = function()
+                    local selectedPlayerName = Options.PlayerList.Value
+                    if selectedPlayerName then
+                        local targetPlayer = game.Players:FindFirstChild(selectedPlayerName)
+                        if targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                            local loadingGui = Instance.new("ScreenGui")
+                            loadingGui.Parent = playerGui
+                            local loadingFrame = Instance.new("Frame")
+                            loadingFrame.Size = UDim2.new(1, 0, 1, 0)
+                            loadingFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+                            loadingFrame.BackgroundTransparency = 0.5
+                            loadingFrame.Parent = loadingGui
+                            local vLogo = Instance.new("TextLabel")
+                            vLogo.Size = UDim2.new(0, 100, 0, 100)
+                            vLogo.Position = UDim2.new(0.5, -50, 0.5, -50)
+                            vLogo.BackgroundTransparency = 1
+                            vLogo.Text = "V"
+                            vLogo.TextColor3 = Color3.fromRGB(0, 180, 255)
+                            vLogo.Font = Enum.Font.GothamBlack
+                            vLogo.TextSize = 80
+                            vLogo.Parent = loadingFrame
+                            local tween = game:GetService("TweenService"):Create(vLogo, TweenInfo.new(2, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1), {Rotation = 360})
+                            tween:Play()
+                            task.wait(2)
+                            game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = targetPlayer.Character.HumanoidRootPart.CFrame
+                            loadingGui:Destroy()
+                            Fluent:Notify({ Title = "Others", Content = "Teleported to " .. selectedPlayerName .. "!", Duration = 5 })
+                        else
+                            Fluent:Notify({ Title = "Others", Content = "Player not found or no character!", Duration = 5 })
+                        end
+                    else
+                        Fluent:Notify({ Title = "Others", Content = "Please select a player!", Duration = 5 })
+                    end
+                end 
+            })
+
+            Tabs.Others:AddParagraph({ 
+                Title = "Troll Player", 
+                Content = "Coming soon!" 
+            })
+
             Tabs.Dupe:AddParagraph({ Title = "Dupe", Content = "Duplication features will be added here." })
 
             Tabs.Bypass:AddButton({ Title = "Interact Time Remover", Description = "Removes the hold time for interactions", Callback = function()
@@ -423,13 +508,14 @@ enterButton.MouseButton1Click:Connect(function()
         SaveManager:IgnoreThemeSettings()
         SaveManager:SetIgnoreIndexes({})
         InterfaceManager:SetFolder("FluentScriptHub")
-        SaveManager:SetFolder("FluentScriptHub/specific-game")
+        SaveManager:SetFolder("FluentScriptHub/tha-bronx-3")
         InterfaceManager:BuildInterfaceSection(Tabs.Settings)
         SaveManager:BuildConfigSection(Tabs.Settings)
 
         Window:SelectTab(1)
-        Fluent:Notify({ Title = "Fluent", Content = "The script has been loaded.", Duration = 8 })
+        Fluent:Notify({ Title = "Fluent", Content = "The script has been loaded for Tha Bronx 3.", Duration = 8 })
         SaveManager:LoadAutoloadConfig()
+        refreshPlayerList() -- Initial player list refresh
     else
         Fluent:Notify({ Title = "Key System", Content = "Invalid key! Please try again.", Duration = 5 })
     end
@@ -437,9 +523,9 @@ end)
 
 getKeyButton.MouseButton1Click:Connect(function()
     local discordLink = "https://discord.gg/D8Eyn6Rc"
-    setclipboard(discordLink) -- Copies the link to the clipboard
+    setclipboard(discordLink)
     notification.Text = "Discord link copied to clipboard!"
     notification.Visible = true
-    task.wait(3) -- Show notification for 3 seconds
+    task.wait(3)
     notification.Visible = false
 end)
