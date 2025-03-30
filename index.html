@@ -193,7 +193,7 @@ enterButton.MouseButton1Click:Connect(function()
         do
             Fluent:Notify({ Title = "Notification", Content = "VEXTO V2", SubContent = "LOADING", Duration = 3 })
             
-            -- Credits Tab (Removed "UI: Fluent Library")
+            -- Credits Tab
             Tabs.Credits:AddParagraph({ Title = "Vexto V2 Premium Credits", Content = "Created by: Fivestar\nLead Scripter: Fivestar\nVersion: " .. Fluent.Version .. "\nUpdated: March 27, 2025\nThanks!" })
             Tabs.Credits:AddButton({ Title = "Copy Discord Link📎", Callback = function() 
                 setclipboard("https://discord.gg/njnj6qeWna")
@@ -205,108 +205,166 @@ enterButton.MouseButton1Click:Connect(function()
             local Tracers = Tabs.Visual:AddToggle("Tracers", { Title = "Tracers", Default = false })
             local espObjects = {}
             local tracerObjects = {}
+
             ESP:OnChanged(function()
                 local state = Options.ESP.Value
                 if state then
-                    for _, player in pairs(game.Players:GetPlayers()) do
-                        if player ~= game.Players.LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-                            local highlight = Instance.new("Highlight")
-                            highlight.Parent = player.Character
-                            highlight.FillColor = Color3.fromRGB(255, 0, 0)
-                            highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
-                            espObjects[player] = highlight
-                        end
-                    end
-                    game.Players.PlayerAdded:Connect(function(player)
-                        player.CharacterAdded:Connect(function(char)
-                            if Options.ESP.Value then
+                    local function applyESP(player)
+                        if player == game.Players.LocalPlayer then return end
+                        local function updateESP(char)
+                            if char then
+                                local existingHighlight = espObjects[player]
+                                if existingHighlight then existingHighlight:Destroy() end
                                 local highlight = Instance.new("Highlight")
                                 highlight.Parent = char
                                 highlight.FillColor = Color3.fromRGB(255, 0, 0)
                                 highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
                                 espObjects[player] = highlight
                             end
+                        end
+
+                        -- Apply to current character
+                        if player.Character then
+                            updateESP(player.Character)
+                        end
+
+                        -- Reapply ESP on respawn
+                        player.CharacterAdded:Connect(function(char)
+                            if Options.ESP.Value then
+                                updateESP(char)
+                            end
                         end)
+
+                        -- Keep ESP on death if character persists
+                        player.CharacterRemoving:Connect(function(oldChar)
+                            if Options.ESP.Value and oldChar.Parent then
+                                local highlight = espObjects[player]
+                                if highlight then
+                                    highlight.Parent = oldChar -- Keep highlight on corpse if it remains
+                                end
+                            end
+                        end)
+                    end
+
+                    -- Apply ESP to all existing players
+                    for _, player in pairs(game.Players:GetPlayers()) do
+                        applyESP(player)
+                    end
+
+                    -- Handle new players
+                    game.Players.PlayerAdded:Connect(function(player)
+                        if Options.ESP.Value then
+                            applyESP(player)
+                        end
                     end)
                 else
-                    for player, highlight in pairs(espObjects) do
+                    -- Clean up ESP when toggled off
+                    for _, highlight in pairs(espObjects) do
                         if highlight then highlight:Destroy() end
                     end
                     table.clear(espObjects)
                 end
             end)
+
             Tracers:OnChanged(function()
                 local state = Options.Tracers.Value
                 if state then
-                    for _, player in pairs(game.Players:GetPlayers()) do
-                        if player ~= game.Players.LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-                            local line = Drawing.new("Line")
-                            line.Thickness = 1
-                            line.Color = Color3.fromRGB(0, 255, 0)
-                            line.Visible = true
-                            tracerObjects[player] = line
-                        end
+                    local function applyTracer(player)
+                        if player == game.Players.LocalPlayer then return end
+                        local line = Drawing.new("Line")
+                        line.Thickness = 1
+                        line.Color = Color3.fromRGB(0, 255, 0)
+                        line.Visible = false -- Start invisible, activate when character exists
+                        tracerObjects[player] = line
                     end
-                    game:GetService("RunService").RenderStepped:Connect(function()
-                        if Options.Tracers.Value then
-                            for player, line in pairs(tracerObjects) do
-                                if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-                                    local root = player.Character.HumanoidRootPart
-                                    local screenPos, onScreen = game.Workspace.CurrentCamera:WorldToViewportPoint(root.Position)
-                                    line.From = Vector2.new(game.Workspace.CurrentCamera.ViewportSize.X / 2, game.Workspace.CurrentCamera.ViewportSize.Y)
-                                    line.To = Vector2.new(screenPos.X, screenPos.Y)
-                                    line.Visible = onScreen
-                                else
-                                    line.Visible = false
-                                end
+
+                    -- Apply tracers to all existing players
+                    for _, player in pairs(game.Players:GetPlayers()) do
+                        applyTracer(player)
+                    end
+
+                    -- Update tracers every frame
+                    local tracerConnection
+                    tracerConnection = game:GetService("RunService").RenderStepped:Connect(function()
+                        if not Options.Tracers.Value then
+                            if tracerConnection then tracerConnection:Disconnect() end
+                            return
+                        end
+                        for player, line in pairs(tracerObjects) do
+                            local char = player.Character
+                            if char and char:FindFirstChild("HumanoidRootPart") then
+                                local root = char.HumanoidRootPart
+                                local screenPos, onScreen = game.Workspace.CurrentCamera:WorldToViewportPoint(root.Position)
+                                line.From = Vector2.new(game.Workspace.CurrentCamera.ViewportSize.X / 2, game.Workspace.CurrentCamera.ViewportSize.Y)
+                                line.To = Vector2.new(screenPos.X, screenPos.Y)
+                                line.Visible = onScreen
+                            else
+                                line.Visible = false -- Hide tracer if no character
                             end
                         end
                     end)
+
+                    -- Handle new players
+                    game.Players.PlayerAdded:Connect(function(player)
+                        if Options.Tracers.Value then
+                            applyTracer(player)
+                        end
+                    end)
                 else
+                    -- Clean up tracers
                     for _, line in pairs(tracerObjects) do
                         if line then line:Remove() end
                     end
                     table.clear(tracerObjects)
                 end
             end)
-            Tabs.Visual:AddToggle("Fullbright", { Title = "Fullbright", Default = false, Callback = function(state) 
-                if state then 
-                    game.Lighting.Brightness = 2 
-                    game.Lighting.ClockTime = 14 
-                    game.Lighting.FogEnd = 100000 
-                    game.Lighting.GlobalShadows = false 
-                else 
-                    game.Lighting.Brightness = 1 
-                    game.Lighting.ClockTime = 0 
-                    game.Lighting.FogEnd = 1000 
-                    game.Lighting.GlobalShadows = true 
-                end 
-            end})
-            Tabs.Visual:AddToggle("PlayerNames", { Title = "Player Names", Default = false, Callback = function(state)
-                for _, player in pairs(game.Players:GetPlayers()) do
-                    if player ~= game.Players.LocalPlayer and player.Character then
-                        local billboard = player.Character:FindFirstChild("NameBillboard")
-                        if state and not billboard then
-                            local bg = Instance.new("BillboardGui")
-                            bg.Name = "NameBillboard"
-                            bg.Parent = player.Character:FindFirstChild("Head") or player.Character
-                            bg.Adornee = player.Character:FindFirstChild("Head")
-                            bg.Size = UDim2.new(0, 100, 0, 50)
-                            bg.StudsOffset = Vector3.new(0, 2, 0)
-                            bg.AlwaysOnTop = true
-                            local label = Instance.new("TextLabel")
-                            label.Parent = bg
-                            label.Size = UDim2.new(1, 0, 1, 0)
-                            label.BackgroundTransparency = 1
-                            label.Text = player.Name
-                            label.TextColor3 = Color3.fromRGB(255, 255, 255)
-                            label.TextScaled = true
-                        elseif not state and billboard then
-                            billboard:Destroy()
+
+            Tabs.Visual:AddToggle("Fullbright", { 
+                Title = "Fullbright", 
+                Default = false, 
+                Callback = function(state) 
+                    if state then 
+                        game.Lighting.Brightness = 2 
+                        game.Lighting.ClockTime = 14 
+                        game.Lighting.FogEnd = 100000 
+                        game.Lighting.GlobalShadows = false 
+                    else 
+                        game.Lighting.Brightness = 1 
+                        game.Lighting.ClockTime = 0 
+                        game.Lighting.FogEnd = 1000 
+                        game.Lighting.GlobalShadows = true 
+                    end 
+                end
+            })
+            Tabs.Visual:AddToggle("PlayerNames", { 
+                Title = "Player Names", 
+                Default = false, 
+                Callback = function(state)
+                    for _, player in pairs(game.Players:GetPlayers()) do
+                        if player ~= game.Players.LocalPlayer and player.Character then
+                            local billboard = player.Character:FindFirstChild("NameBillboard")
+                            if state and not billboard then
+                                local bg = Instance.new("BillboardGui")
+                                bg.Name = "NameBillboard"
+                                bg.Parent = player.Character:FindFirstChild("Head") or player.Character
+                                bg.Adornee = player.Character:FindFirstChild("Head")
+                                bg.Size = UDim2.new(0, 100, 0, 50)
+                                bg.StudsOffset = Vector3.new(0, 2, 0)
+                                bg.AlwaysOnTop = true
+                                local label = Instance.new("TextLabel")
+                                label.Parent = bg
+                                label.Size = UDim2.new(1, 0, 1, 0)
+                                label.BackgroundTransparency = 1
+                                label.Text = player.Name
+                                label.TextColor3 = Color3.fromRGB(255, 255, 255)
+                                label.TextScaled = true
+                            elseif not state and billboard then
+                                billboard:Destroy()
+                            end
                         end
                     end
                 end
-            end})
+            })
 
             -- Combat Tab
             local aimbotConnection
@@ -319,7 +377,72 @@ enterButton.MouseButton1Click:Connect(function()
             local AimbotSelection = Tabs.Combat:AddDropdown("AimbotSelection", { Title = "Aimbot Target", Values = {"None", "Head", "Bottom"}, Default = "None" })
             local SilentAimToggle = Tabs.Combat:AddToggle("SilentAimToggle", { Title = "Silent Aim", Default = false, Description = "Aims without moving your camera" })
             local TriggerBotToggle = Tabs.Combat:AddToggle("TriggerBotToggle", { Title = "Trigger Bot", Default = false, Description = "Auto-clicks when aiming at a player" })
-            local HitboxExpander = Tabs.Combat:AddToggle("HitboxExpander", { Title = "Hitbox Expander", Default = false, Description = "Increases enemy hitbox size" })
+            local HitboxExpander = Tabs.Combat:AddToggle("HitboxExpander", { 
+                Title = "Hitbox Expander", 
+                Default = false, 
+                Description = "Increases enemy hitbox size",
+                Callback = function(state)
+                    if state then
+                        if hitboxConnection then hitboxConnection:Disconnect() end
+                        hitboxConnection = game:GetService("RunService").Stepped:Connect(function()
+                            for _, player in pairs(game.Players:GetPlayers()) do
+                                if player ~= game.Players.LocalPlayer and player.Character and player.Character:FindFirstChild("Head") then
+                                    local head = player.Character.Head
+                                    if head.Size ~= Vector3.new(5, 5, 5) then -- Only update if not already expanded
+                                        head.Size = Vector3.new(5, 5, 5)
+                                        head.Transparency = 0.7
+                                    end
+                                end
+                            end
+                        end)
+
+                        -- Handle respawns for all players
+                        for _, player in pairs(game.Players:GetPlayers()) do
+                            if player ~= game.Players.LocalPlayer then
+                                player.CharacterAdded:Connect(function(char)
+                                    if Options.HitboxExpander.Value then
+                                        local head = char:WaitForChild("Head", 5)
+                                        if head then
+                                            head.Size = Vector3.new(5, 5, 5)
+                                            head.Transparency = 0.7
+                                        end
+                                    end
+                                end)
+                            end
+                        end
+
+                        -- Handle new players joining
+                        game.Players.PlayerAdded:Connect(function(player)
+                            if player ~= game.Players.LocalPlayer then
+                                player.CharacterAdded:Connect(function(char)
+                                    if Options.HitboxExpander.Value then
+                                        local head = char:WaitForChild("Head", 5)
+                                        if head then
+                                            head.Size = Vector3.new(5, 5, 5)
+                                            head.Transparency = 0.7
+                                        end
+                                    end
+                                end)
+                            end
+                        end)
+
+                        Fluent:Notify({ Title = "Combat", Content = "Hitbox Expander enabled!", Duration = 3 })
+                    else
+                        if hitboxConnection then
+                            hitboxConnection:Disconnect()
+                            hitboxConnection = nil
+                        end
+                        for _, player in pairs(game.Players:GetPlayers()) do
+                            if player ~= game.Players.LocalPlayer and player.Character and player.Character:FindFirstChild("Head") then
+                                local head = player.Character.Head
+                                head.Size = Vector3.new(1, 1, 1)
+                                head.Transparency = 0
+                            end
+                        end
+                        Fluent:Notify({ Title = "Combat", Content = "Hitbox Expander disabled!", Duration = 3 })
+                    end
+                end 
+            })
 
             AimbotToggle:OnChanged(function()
                 local state = Options.AimbotToggle.Value
@@ -465,60 +588,34 @@ enterButton.MouseButton1Click:Connect(function()
                 end
             end)
 
-            HitboxExpander:OnChanged(function()
-                local state = Options.HitboxExpander.Value
-                if state then
-                    if hitboxConnection then hitboxConnection:Disconnect() end
-                    hitboxConnection = game:GetService("RunService").Stepped:Connect(function()
-                        for _, player in pairs(game.Players:GetPlayers()) do
-                            if player ~= game.Players.LocalPlayer and player.Character and player.Character:FindFirstChild("Head") then
-                                local head = player.Character.Head
-                                head.Size = Vector3.new(5, 5, 5)
-                                head.Transparency = 0.7
-                            end
-                        end
-                    end)
-                    Fluent:Notify({ Title = "Combat", Content = "Hitbox Expander enabled!", Duration = 3 })
-                else
-                    if hitboxConnection then
-                        hitboxConnection:Disconnect()
-                        hitboxConnection = nil
-                    end
-                    for _, player in pairs(game.Players:GetPlayers()) do
-                        if player ~= game.Players.LocalPlayer and player.Character and player.Character:FindFirstChild("Head") then
-                            local head = player.Character.Head
-                            head.Size = Vector3.new(1, 1, 1)
-                            head.Transparency = 0
-                        end
-                    end
-                    Fluent:Notify({ Title = "Combat", Content = "Hitbox Expander disabled!", Duration = 3 })
-                end
-            end)
-
             -- Main Tab
-            Tabs.Main:AddButton({ Title = "Speed Boost", Description = "Boosts speed to 35 with walking animation", Callback = function()
-                local character = game.Players.LocalPlayer.Character
-                if character and character:FindFirstChild("Humanoid") then
-                    local humanoid = character.Humanoid
-                    local originalSpeed = humanoid.WalkSpeed
-                    humanoid.WalkSpeed = 35
-                    humanoid:ChangeState(Enum.HumanoidStateType.Running)
-                    local animator = humanoid:FindFirstChildOfClass("Animator")
-                    if animator then
-                        local animation = Instance.new("Animation")
-                        animation.AnimationId = "rbxassetid://013141277"
-                        local track = animator:LoadAnimation(animation)
-                        track:Play()
+            Tabs.Main:AddButton({ 
+                Title = "Speed Boost", 
+                Description = "Boosts speed to 35 with walking animation", 
+                Callback = function()
+                    local character = game.Players.LocalPlayer.Character
+                    if character and character:FindFirstChild("Humanoid") then
+                        local humanoid = character.Humanoid
+                        local originalSpeed = humanoid.WalkSpeed
+                        humanoid.WalkSpeed = 35
+                        humanoid:ChangeState(Enum.HumanoidStateType.Running)
+                        local animator = humanoid:FindFirstChildOfClass("Animator")
+                        if animator then
+                            local animation = Instance.new("Animation")
+                            animation.AnimationId = "rbxassetid://013141277"
+                            local track = animator:LoadAnimation(animation)
+                            track:Play()
+                        end
+                        Fluent:Notify({ Title = "Player", Content = "Speed Boost activated!", Duration = 5 })
+                        task.delay(10, function()
+                            humanoid.WalkSpeed = originalSpeed
+                            Fluent:Notify({ Title = "Player", Content = "Speed Boost deactivated!", Duration = 5 })
+                        end)
+                    else
+                        Fluent:Notify({ Title = "Player", Content = "Character not found!", Duration = 5 })
                     end
-                    Fluent:Notify({ Title = "Player", Content = "Speed Boost activated!", Duration = 5 })
-                    task.delay(10, function()
-                        humanoid.WalkSpeed = originalSpeed
-                        Fluent:Notify({ Title = "Player", Content = "Speed Boost deactivated!", Duration = 5 })
-                    end)
-                else
-                    Fluent:Notify({ Title = "Player", Content = "Character not found!", Duration = 5 })
                 end
-            end})
+            })
             local Noclip = Tabs.Main:AddToggle("Noclip", { Title = "Noclip", Default = false })
             local noclipConnection
             Noclip:OnChanged(function()
@@ -682,27 +779,31 @@ enterButton.MouseButton1Click:Connect(function()
             Tabs.Dupe:AddParagraph({ Title = "Dupe", Content = "Duplication features will be added here." })
 
             -- Bypass Tab
-            Tabs.Bypass:AddButton({ Title = "Interact Time Remover", Description = "Removes the hold time for interactions", Callback = function()
-                local success, err = pcall(function()
-                    for _, prompt in pairs(game:GetService("ProximityPromptService"):GetChildren()) do
-                        if prompt:IsA("ProximityPrompt") then prompt.HoldDuration = 0 end
-                    end
-                    game:GetService("ProximityPromptService").ChildAdded:Connect(function(child)
-                        if child:IsA("ProximityPrompt") then child.HoldDuration = 0 end
+            Tabs.Bypass:AddButton({ 
+                Title = "Interact Time Remover", 
+                Description = "Removes the hold time for interactions", 
+                Callback = function()
+                    local success, err = pcall(function()
+                        for _, prompt in pairs(game:GetService("ProximityPromptService"):GetChildren()) do
+                            if prompt:IsA("ProximityPrompt") then prompt.HoldDuration = 0 end
+                        end
+                        game:GetService("ProximityPromptService").ChildAdded:Connect(function(child)
+                            if child:IsA("ProximityPrompt") then child.HoldDuration = 0 end
+                        end)
+                        for _, obj in pairs(game.Workspace:GetDescendants()) do
+                            if obj:IsA("ProximityPrompt") then obj.HoldDuration = 0 end
+                        end
+                        game.Workspace.DescendantAdded:Connect(function(descendant)
+                            if descendant:IsA("ProximityPrompt") then descendant.HoldDuration = 0 end
+                        end)
                     end)
-                    for _, obj in pairs(game.Workspace:GetDescendants()) do
-                        if obj:IsA("ProximityPrompt") then obj.HoldDuration = 0 end
+                    if success then
+                        Fluent:Notify({ Title = "Bypass", Content = "Interact time has been removed!", Duration = 5 })
+                    else
+                        Fluent:Notify({ Title = "Bypass", Content = "Failed to remove interact time: " .. tostring(err), Duration = 5 })
                     end
-                    game.Workspace.DescendantAdded:Connect(function(descendant)
-                        if descendant:IsA("ProximityPrompt") then descendant.HoldDuration = 0 end
-                    end)
-                end)
-                if success then
-                    Fluent:Notify({ Title = "Bypass", Content = "Interact time has been removed!", Duration = 5 })
-                else
-                    Fluent:Notify({ Title = "Bypass", Content = "Failed to remove interact time: " .. tostring(err), Duration = 5 })
                 end
-            end})
+            })
 
             -- Teleports Tab
             Tabs.Teleports:AddButton({
