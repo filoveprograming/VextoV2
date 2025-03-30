@@ -155,19 +155,10 @@ notification.TextSize = 14
 notification.Parent = keyFrame
 notification.Visible = false
 
-enterButton.MouseEnter:Connect(function()
-    enterButton.BackgroundTransparency = 0.2
-end)
-enterButton.MouseLeave:Connect(function()
-    enterButton.BackgroundTransparency = 0.3
-end)
-
-getKeyButton.MouseEnter:Connect(function()
-    getKeyButton.BackgroundTransparency = 0.2
-end)
-getKeyButton.MouseLeave:Connect(function()
-    getKeyButton.BackgroundTransparency = 0.3
-end)
+enterButton.MouseEnter:Connect(function() enterButton.BackgroundTransparency = 0.2 end)
+enterButton.MouseLeave:Connect(function() enterButton.BackgroundTransparency = 0.3 end)
+getKeyButton.MouseEnter:Connect(function() getKeyButton.BackgroundTransparency = 0.2 end)
+getKeyButton.MouseLeave:Connect(function() getKeyButton.BackgroundTransparency = 0.3 end)
 
 local validKey = "VEXTONEWUPDATEV3"
 
@@ -191,9 +182,9 @@ enterButton.MouseButton1Click:Connect(function()
             Combat = Window:AddTab({ Title = "Combat", Icon = "skull" }),
             Main = Window:AddTab({ Title = "Player", Icon = "user" }),
             Others = Window:AddTab({ Title = "Others", Icon = "users" }),
-            Money = Window:AddTab({ Title = "Money", Icon = "wallet" }), -- Added Money tab with wallet icon under Others
             Dupe = Window:AddTab({ Title = "Dupe", Icon = "copy" }),
             Bypass = Window:AddTab({ Title = "Bypass", Icon = "shield-off" }),
+            Teleports = Window:AddTab({ Title = "Teleports", Icon = "navigation" }),
             Settings = Window:AddTab({ Title = "Settings", Icon = "settings" })
         }
 
@@ -202,12 +193,14 @@ enterButton.MouseButton1Click:Connect(function()
         do
             Fluent:Notify({ Title = "Notification", Content = "VEXTO V2", SubContent = "LOADING", Duration = 3 })
             
-            Tabs.Credits:AddParagraph({ Title = "Vexto V2 Premium Credits", Content = "Created by: Fivestar\nLead Scripter: Fivestar\nUI: Fluent Library\nVersion: " .. Fluent.Version .. "\nUpdated: March 27, 2025\nThanks!" })
+            -- Credits Tab (Removed "UI: Fluent Library")
+            Tabs.Credits:AddParagraph({ Title = "Vexto V2 Premium Credits", Content = "Created by: Fivestar\nLead Scripter: Fivestar\nVersion: " .. Fluent.Version .. "\nUpdated: March 27, 2025\nThanks!" })
             Tabs.Credits:AddButton({ Title = "Copy Discord Link📎", Callback = function() 
                 setclipboard("https://discord.gg/njnj6qeWna")
                 Fluent:Notify({ Title = "Credits", Content = "Discord link copied to clipboard!", Duration = 5 })
             end})
 
+            -- Visual Tab
             local ESP = Tabs.Visual:AddToggle("ESP", { Title = "ESP", Default = false })
             local Tracers = Tabs.Visual:AddToggle("Tracers", { Title = "Tracers", Default = false })
             local espObjects = {}
@@ -315,8 +308,194 @@ enterButton.MouseButton1Click:Connect(function()
                 end
             end})
 
-            Tabs.Combat:AddParagraph({ Title = "Combat", Content = "Combat features will be added here." })
+            -- Combat Tab
+            local aimbotConnection
+            local silentAimConnection
+            local triggerConnection
+            local hitboxConnection
+            local currentTarget = nil
 
+            local AimbotToggle = Tabs.Combat:AddToggle("AimbotToggle", { Title = "Aimbot", Default = false })
+            local AimbotSelection = Tabs.Combat:AddDropdown("AimbotSelection", { Title = "Aimbot Target", Values = {"None", "Head", "Bottom"}, Default = "None" })
+            local SilentAimToggle = Tabs.Combat:AddToggle("SilentAimToggle", { Title = "Silent Aim", Default = false, Description = "Aims without moving your camera" })
+            local TriggerBotToggle = Tabs.Combat:AddToggle("TriggerBotToggle", { Title = "Trigger Bot", Default = false, Description = "Auto-clicks when aiming at a player" })
+            local HitboxExpander = Tabs.Combat:AddToggle("HitboxExpander", { Title = "Hitbox Expander", Default = false, Description = "Increases enemy hitbox size" })
+
+            AimbotToggle:OnChanged(function()
+                local state = Options.AimbotToggle.Value
+                if state then
+                    if Options.AimbotSelection.Value == "None" then
+                        Fluent:Notify({ Title = "Combat", Content = "Please select a target (Head or Bottom)!", Duration = 3 })
+                        AimbotToggle:SetValue(false)
+                        return
+                    end
+                    if aimbotConnection then aimbotConnection:Disconnect() end
+                    aimbotConnection = game:GetService("RunService").RenderStepped:Connect(function()
+                        if not Options.AimbotToggle.Value then return end
+                        if not currentTarget or not currentTarget.Character or not currentTarget.Character:FindFirstChild("Humanoid") or currentTarget.Character.Humanoid.Health <= 0 then
+                            local closestPlayer = nil
+                            local shortestDistance = math.huge
+                            local camera = game.Workspace.CurrentCamera
+                            local localPlayer = game.Players.LocalPlayer
+                            local screenCenter = Vector2.new(camera.ViewportSize.X/2, camera.ViewportSize.Y/2)
+                            for _, player in pairs(game.Players:GetPlayers()) do
+                                if player ~= localPlayer and player.Character and player.Character:FindFirstChild("Humanoid") and player.Character.Humanoid.Health > 0 then
+                                    local head = player.Character:FindFirstChild("Head")
+                                    if head then
+                                        local headPosition, onScreen = camera:WorldToViewportPoint(head.Position)
+                                        if onScreen then
+                                            local distance = (Vector2.new(headPosition.X, headPosition.Y) - screenCenter).Magnitude
+                                            if distance < shortestDistance then
+                                                shortestDistance = distance
+                                                closestPlayer = player
+                                            end
+                                        end
+                                    end
+                                end
+                            end
+                            if closestPlayer then
+                                currentTarget = closestPlayer
+                                Fluent:Notify({ Title = "Combat", Content = "Targeting " .. closestPlayer.Name .. "!", Duration = 3 })
+                            else
+                                currentTarget = nil
+                                return
+                            end
+                        end
+                        local targetPart = nil
+                        if currentTarget and currentTarget.Character and currentTarget.Character:FindFirstChild("Humanoid") and currentTarget.Character.Humanoid.Health > 0 then
+                            if Options.AimbotSelection.Value == "Head" then
+                                targetPart = currentTarget.Character:FindFirstChild("Head")
+                            elseif Options.AimbotSelection.Value == "Bottom" then
+                                targetPart = currentTarget.Character:FindFirstChild("HumanoidRootPart")
+                            end
+                        end
+                        if targetPart then
+                            local camera = game.Workspace.CurrentCamera
+                            local targetPosition = targetPart.Position
+                            camera.CFrame = CFrame.new(camera.CFrame.Position, targetPosition)
+                        end
+                    end)
+                    Fluent:Notify({ Title = "Combat", Content = "Aimbot enabled targeting " .. Options.AimbotSelection.Value .. "!", Duration = 3 })
+                else
+                    if aimbotConnection then
+                        aimbotConnection:Disconnect()
+                        aimbotConnection = nil
+                    end
+                    currentTarget = nil
+                    Fluent:Notify({ Title = "Combat", Content = "Aimbot disabled!", Duration = 3 })
+                end
+            end)
+
+            AimbotSelection:OnChanged(function()
+                if Options.AimbotToggle.Value and Options.AimbotSelection.Value == "None" then
+                    AimbotToggle:SetValue(false)
+                    Fluent:Notify({ Title = "Combat", Content = "Aimbot disabled due to 'None' selection!", Duration = 3 })
+                elseif Options.AimbotToggle.Value then
+                    Fluent:Notify({ Title = "Combat", Content = "Aimbot now targeting " .. Options.AimbotSelection.Value .. "!", Duration = 3 })
+                end
+            end)
+
+            SilentAimToggle:OnChanged(function()
+                local state = Options.SilentAimToggle.Value
+                if state then
+                    if silentAimConnection then silentAimConnection:Disconnect() end
+                    silentAimConnection = game:GetService("RunService").RenderStepped:Connect(function()
+                        if not Options.SilentAimToggle.Value then return end
+                        local closestPlayer = nil
+                        local shortestDistance = math.huge
+                        local camera = game.Workspace.CurrentCamera
+                        local localPlayer = game.Players.LocalPlayer
+                        local screenCenter = Vector2.new(camera.ViewportSize.X/2, camera.ViewportSize.Y/2)
+                        for _, player in pairs(game.Players:GetPlayers()) do
+                            if player ~= localPlayer and player.Character and player.Character:FindFirstChild("Humanoid") and player.Character.Humanoid.Health > 0 then
+                                local head = player.Character:FindFirstChild("Head")
+                                if head then
+                                    local headPosition, onScreen = camera:WorldToViewportPoint(head.Position)
+                                    if onScreen then
+                                        local distance = (Vector2.new(headPosition.X, headPosition.Y) - screenCenter).Magnitude
+                                        if distance < shortestDistance then
+                                            shortestDistance = distance
+                                            closestPlayer = player
+                                        end
+                                    end
+                                end
+                            end
+                        end
+                        if closestPlayer and closestPlayer.Character then
+                            local head = closestPlayer.Character:FindFirstChild("Head")
+                            if head then
+                                Fluent:Notify({ Title = "Combat", Content = "Silent Aim locked onto " .. closestPlayer.Name .. "!", Duration = 3 })
+                            end
+                        end
+                    end)
+                else
+                    if silentAimConnection then
+                        silentAimConnection:Disconnect()
+                        silentAimConnection = nil
+                    end
+                    Fluent:Notify({ Title = "Combat", Content = "Silent Aim disabled!", Duration = 3 })
+                end
+            end)
+
+            TriggerBotToggle:OnChanged(function()
+                local state = Options.TriggerBotToggle.Value
+                if state then
+                    if triggerConnection then triggerConnection:Disconnect() end
+                    triggerConnection = game:GetService("RunService").RenderStepped:Connect(function()
+                        if not Options.TriggerBotToggle.Value then return end
+                        local camera = game.Workspace.CurrentCamera
+                        local ray = camera:ScreenPointToRay(camera.ViewportSize.X/2, camera.ViewportSize.Y/2)
+                        local raycastResult = workspace:Raycast(ray.Origin, ray.Direction * 1000)
+                        if raycastResult and raycastResult.Instance then
+                            local hitPlayer = game.Players:GetPlayerFromCharacter(raycastResult.Instance.Parent)
+                            if hitPlayer and hitPlayer ~= game.Players.LocalPlayer then
+                                mouse1press()
+                                task.wait(0.05)
+                                mouse1release()
+                            end
+                        end
+                    end)
+                    Fluent:Notify({ Title = "Combat", Content = "Trigger Bot enabled!", Duration = 3 })
+                else
+                    if triggerConnection then
+                        triggerConnection:Disconnect()
+                        triggerConnection = nil
+                    end
+                    Fluent:Notify({ Title = "Combat", Content = "Trigger Bot disabled!", Duration = 3 })
+                end
+            end)
+
+            HitboxExpander:OnChanged(function()
+                local state = Options.HitboxExpander.Value
+                if state then
+                    if hitboxConnection then hitboxConnection:Disconnect() end
+                    hitboxConnection = game:GetService("RunService").Stepped:Connect(function()
+                        for _, player in pairs(game.Players:GetPlayers()) do
+                            if player ~= game.Players.LocalPlayer and player.Character and player.Character:FindFirstChild("Head") then
+                                local head = player.Character.Head
+                                head.Size = Vector3.new(5, 5, 5)
+                                head.Transparency = 0.7
+                            end
+                        end
+                    end)
+                    Fluent:Notify({ Title = "Combat", Content = "Hitbox Expander enabled!", Duration = 3 })
+                else
+                    if hitboxConnection then
+                        hitboxConnection:Disconnect()
+                        hitboxConnection = nil
+                    end
+                    for _, player in pairs(game.Players:GetPlayers()) do
+                        if player ~= game.Players.LocalPlayer and player.Character and player.Character:FindFirstChild("Head") then
+                            local head = player.Character.Head
+                            head.Size = Vector3.new(1, 1, 1)
+                            head.Transparency = 0
+                        end
+                    end
+                    Fluent:Notify({ Title = "Combat", Content = "Hitbox Expander disabled!", Duration = 3 })
+                end
+            end)
+
+            -- Main Tab
             Tabs.Main:AddButton({ Title = "Speed Boost", Description = "Boosts speed to 35 with walking animation", Callback = function()
                 local character = game.Players.LocalPlayer.Character
                 if character and character:FindFirstChild("Humanoid") then
@@ -340,7 +519,6 @@ enterButton.MouseButton1Click:Connect(function()
                     Fluent:Notify({ Title = "Player", Content = "Character not found!", Duration = 5 })
                 end
             end})
-
             local Noclip = Tabs.Main:AddToggle("Noclip", { Title = "Noclip", Default = false })
             local noclipConnection
             Noclip:OnChanged(function()
@@ -370,7 +548,10 @@ enterButton.MouseButton1Click:Connect(function()
                     game.Players.LocalPlayer.CharacterAdded:Connect(setupNoclip)
                     if character then setupNoclip(character) end
                 else
-                    if noclipConnection then noclipConnection:Disconnect() noclipConnection = nil end
+                    if noclipConnection then 
+                        noclipConnection:Disconnect()
+                        noclipConnection = nil 
+                    end
                     if character and character.Parent then
                         for _, part in pairs(character:GetDescendants()) do
                             if part:IsA("BasePart") then
@@ -380,7 +561,6 @@ enterButton.MouseButton1Click:Connect(function()
                     end
                 end
             end)
-
             local InfJump = Tabs.Main:AddToggle("InfJump", { Title = "Infinite Jump", Default = false })
             local jumpConnection
             InfJump:OnChanged(function()
@@ -397,7 +577,9 @@ enterButton.MouseButton1Click:Connect(function()
                 end
             end)
 
+            -- Others Tab
             local playerDropdown
+            local spectateConnection
             local function refreshPlayerList()
                 local playerList = {}
                 for _, p in pairs(game.Players:GetPlayers()) do
@@ -408,7 +590,6 @@ enterButton.MouseButton1Click:Connect(function()
                 playerDropdown:SetValues(playerList)
                 playerDropdown:SetValue(nil)
             end
-
             Tabs.Others:AddButton({ 
                 Title = "Refresh Player List", 
                 Callback = function()
@@ -416,62 +597,48 @@ enterButton.MouseButton1Click:Connect(function()
                     Fluent:Notify({ Title = "Others", Content = "Player list refreshed!", Duration = 3 })
                 end 
             })
-
             playerDropdown = Tabs.Others:AddDropdown("PlayerList", { 
                 Title = "Players", 
                 Values = {}, 
                 AllowNull = true 
             })
-
-            local Spectate = Tabs.Others:AddToggle("Spectate", { 
-                Title = "Spectate Player", 
-                Default = false 
-            })
-            local spectateTarget = nil
-            Spectate:OnChanged(function()
-                local state = Options.Spectate.Value
-                local selectedPlayerName = Options.PlayerList.Value
-                
-                if state then
-                    if selectedPlayerName then
+            local SpectateToggle = Tabs.Others:AddToggle("SpectateToggle", {
+                Title = "Spectate Player",
+                Default = false,
+                Callback = function(state)
+                    local selectedPlayerName = Options.PlayerList.Value
+                    if state then
+                        if not selectedPlayerName then
+                            Fluent:Notify({ Title = "Others", Content = "Please select a player first!", Duration = 5 })
+                            SpectateToggle:SetValue(false)
+                            return
+                        end
                         local targetPlayer = game.Players:FindFirstChild(selectedPlayerName)
                         if targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("Humanoid") then
-                            spectateTarget = targetPlayer
+                            if spectateConnection then spectateConnection:Disconnect() end
                             game.Workspace.CurrentCamera.CameraSubject = targetPlayer.Character.Humanoid
-                            Fluent:Notify({ 
-                                Title = "Others", 
-                                Content = "Started spectating " .. selectedPlayerName .. "!", 
-                                Duration = 5 
-                            })
+                            Fluent:Notify({ Title = "Others", Content = "Spectating " .. selectedPlayerName .. "!", Duration = 5 })
+                            spectateConnection = game:GetService("RunService").RenderStepped:Connect(function()
+                                if Options.SpectateToggle.Value and targetPlayer.Character and targetPlayer.Character:FindFirstChild("Humanoid") then
+                                    game.Workspace.CurrentCamera.CameraSubject = targetPlayer.Character.Humanoid
+                                end
+                            end)
                         else
-                            Spectate:SetValue(false)
-                            Fluent:Notify({ 
-                                Title = "Others", 
-                                Content = "Player not found or no character!", 
-                                Duration = 5 
-                            })
+                            Fluent:Notify({ Title = "Others", Content = "Player not found or has no character!", Duration = 5 })
+                            SpectateToggle:SetValue(false)
                         end
                     else
-                        Spectate:SetValue(false)
-                        Fluent:Notify({ 
-                            Title = "Others", 
-                            Content = "Please select a player first!", 
-                            Duration = 5 
-                        })
-                    end
-                else
-                    if spectateTarget then
-                        game.Workspace.CurrentCamera.CameraSubject = game.Players.LocalPlayer.Character and game.Players.LocalPlayer.Character:FindFirstChild("Humanoid") or nil
-                        Fluent:Notify({ 
-                            Title = "Others", 
-                            Content = "Stopped spectating " .. spectateTarget.Name .. "!", 
-                            Duration = 5 
-                        })
-                        spectateTarget = nil
+                        if spectateConnection then
+                            spectateConnection:Disconnect()
+                            spectateConnection = nil
+                        end
+                        if game.Players.LocalPlayer.Character and game.Players.LocalPlayer.Character:FindFirstChild("Humanoid") then
+                            game.Workspace.CurrentCamera.CameraSubject = game.Players.LocalPlayer.Character.Humanoid
+                            Fluent:Notify({ Title = "Others", Content = "Stopped spectating!", Duration = 5 })
+                        end
                     end
                 end
-            end)
-
+            })
             Tabs.Others:AddButton({ 
                 Title = "Teleport to Player", 
                 Callback = function()
@@ -487,7 +654,7 @@ enterButton.MouseButton1Click:Connect(function()
                             loadingFrame.BackgroundTransparency = 0.5
                             loadingFrame.Parent = loadingGui
                             local vLogo = Instance.new("TextLabel")
-                            vLogo.Size = UDim2.new(0, 100, 0, 0, 100)
+                            vLogo.Size = UDim2.new(0, 100, 0, 100)
                             vLogo.Position = UDim2.new(0.5, -50, 0.5, -50)
                             vLogo.BackgroundTransparency = 1
                             vLogo.Text = "V"
@@ -509,20 +676,12 @@ enterButton.MouseButton1Click:Connect(function()
                     end
                 end 
             })
+            Tabs.Others:AddParagraph({ Title = "Troll Player", Content = "Coming soon!" })
 
-            Tabs.Others:AddParagraph({ 
-                Title = "Troll Player", 
-                Content = "Coming soon!" 
-            })
-
-            -- Money Tab Content
-            Tabs.Money:AddParagraph({ 
-                Title = "Money Features", 
-                Content = "Money-related features will be added here.\nThis section is under development." 
-            })
-
+            -- Dupe Tab
             Tabs.Dupe:AddParagraph({ Title = "Dupe", Content = "Duplication features will be added here." })
 
+            -- Bypass Tab
             Tabs.Bypass:AddButton({ Title = "Interact Time Remover", Description = "Removes the hold time for interactions", Callback = function()
                 local success, err = pcall(function()
                     for _, prompt in pairs(game:GetService("ProximityPromptService"):GetChildren()) do
@@ -544,6 +703,14 @@ enterButton.MouseButton1Click:Connect(function()
                     Fluent:Notify({ Title = "Bypass", Content = "Failed to remove interact time: " .. tostring(err), Duration = 5 })
                 end
             end})
+
+            -- Teleports Tab
+            Tabs.Teleports:AddButton({
+                Title = "Coming soon",
+                Callback = function()
+                    Fluent:Notify({ Title = "Teleports", Content = "Teleport features are coming soon!", Duration = 5 })
+                end
+            })
         end
 
         SaveManager:SetLibrary(Fluent)
